@@ -104,39 +104,59 @@ func detectTerminate(e any) bool {
 	return false
 }
 
-func (pw *Visualizer) handleEvent(e any, t screen.Texture) {
-	switch e := e.(type) {
+func (pw *Visualizer) drawDefaultUI() {
+	// Заповнюємо фон зеленим кольором
+	pw.w.Fill(pw.sz.Bounds(), color.RGBA{G: 0xff, A: 0xff}, draw.Src)
 
-	case size.Event: // Оновлення даних про розмір вікна.
-		pw.sz = e
+	// Визначаємо розміри фігури "Т" (максимальний розмір не більше половини вікна)
+	shapeWidth := pw.sz.Bounds().Dx() / 2
+	shapeHeight := pw.sz.Bounds().Dy() / 2
+	verticalRectWidth := shapeWidth / 3
+	horizontalRectHeight := shapeHeight / 3
 
-	case error:
-		log.Printf("ERROR: %s", e)
+	// Використовуємо оновлені координати для малювання "Т"
+	centerX := pw.pos.Min.X
+	centerY := pw.pos.Min.Y
 
-	case mouse.Event:
-		if t == nil {
-			// TODO: Реалізувати реакцію на натискання кнопки миші.
-		}
+	// Малюємо вертикальну частину "Т"
+	verticalRect := image.Rect(centerX-verticalRectWidth/2, centerY-(shapeHeight/2), centerX+verticalRectWidth/2, centerY+(shapeHeight/2))
+	pw.w.Fill(verticalRect, color.RGBA{R: 255, G: 255, B: 0, A: 255}, draw.Src)
 
-	case paint.Event:
-		// Малювання контенту вікна.
-		if t == nil {
-			pw.drawDefaultUI()
-		} else {
-			// Використання текстури отриманої через виклик Update.
-			pw.w.Scale(pw.sz.Bounds(), t, t.Bounds(), draw.Src, nil)
-		}
-		pw.w.Publish()
+	// Малюємо горизонтальну частину "Т"
+	horizontalRect := image.Rect(centerX-(shapeWidth/2), centerY-(horizontalRectHeight/2)-shapeHeight/2, centerX+(shapeWidth/2), centerY+(horizontalRectHeight/2)-shapeHeight/2)
+	pw.w.Fill(horizontalRect, color.RGBA{R: 255, G: 255, B: 0, A: 255}, draw.Src)
+
+	// Малюємо білу рамку навколо вікна
+	for _, br := range imageutil.Border(pw.sz.Bounds(), 10) {
+		pw.w.Fill(br, color.White, draw.Src)
 	}
 }
 
-func (pw *Visualizer) drawDefaultUI() {
-	pw.w.Fill(pw.sz.Bounds(), color.Black, draw.Src) // Фон.
+func (pw *Visualizer) handleEvent(e any, t screen.Texture) {
+	switch e := e.(type) {
+	case size.Event: // Window size change
+		pw.sz = e
+	case error:
+		log.Printf("ERROR: %s", e)
+	case mouse.Event:
+		// Left mouse button click event
+		if e.Button == mouse.ButtonLeft && e.Direction == mouse.DirPress {
+			// Оновлення позиції "Т" на основі координат миші
+			pw.pos.Min.X = int(e.X) - pw.pos.Dx()/2 // Центруємо фігуру
+			pw.pos.Min.Y = int(e.Y) - pw.pos.Dy()/2
 
-	// TODO: Змінити колір фону та додати відображення фігури у вашому варіанті.
-
-	// Малювання білої рамки.
-	for _, br := range imageutil.Border(pw.sz.Bounds(), 10) {
-		pw.w.Fill(br, color.White, draw.Src)
+			// Перемалюємо вікно, щоб відобразити нову позицію
+			pw.w.Send(paint.Event{})
+		}
+	case paint.Event:
+		// Малюємо оновлений контент у вікні
+		if t == nil {
+			// Якщо t == nil, це перша подія малювання, тоді малюємо фігуру в центрі
+			pw.drawDefaultUI()
+		} else {
+			// Якщо є текстура, використовуємо її
+			pw.w.Scale(pw.sz.Bounds(), t, t.Bounds(), draw.Src, nil)
+		}
+		pw.w.Publish() // Оновлюємо вікно
 	}
 }
