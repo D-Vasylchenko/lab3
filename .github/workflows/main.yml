@@ -12,17 +12,19 @@ on:
 jobs:
 
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest  # Use the latest Ubuntu runner
+
     steps:
-      - uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v2  # Checkout the code from the repository
 
-      - name: Set up Go
-        uses: actions/setup-go@v3
-        with:
-          go-version: 1.22.0
+    - name: Set up Go
+      uses: actions/setup-go@v2  # Set up Go environment
+      with:
+        go-version: '1.22'  # Specify the Go version you are using
 
-      - name: Build
-        run: go build -v ./...
+    - name: Build
+      run: go build -v ./...
 
-      - name: Test
-        run: go test -v ./...
+    - name: Test
+      run: go test -v ./...
